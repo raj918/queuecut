@@ -12,7 +12,7 @@ export class SalonsService {
     category?: string;
     search?: string;
   }) {
-    const radius = params.radiusMeters || 500;
+    const radius = params.radiusMeters || 25000;
     const { minLat, maxLat, minLon, maxLon } = getBoundingBox(
       params.latitude,
       params.longitude,

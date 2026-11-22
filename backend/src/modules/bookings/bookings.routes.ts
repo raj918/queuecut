@@ -6,6 +6,16 @@ import { authenticateJwt, requireRole } from '../../middleware/auth';
 
 const router = Router();
 
+// --- MVP Public Slot Request & Partner Flow (No token wall for fast onboarding) ---
+router.post('/slot-request', BookingsController.requestSlot);
+router.get('/public/:id', BookingsController.getPublicById);
+router.get('/salon/:salonId/requests', BookingsController.getSalonRequests);
+router.post('/:id/respond', BookingsController.respondToSlotRequest);
+router.post('/:id/customer-confirm', BookingsController.customerConfirm);
+router.post('/:id/start-service', BookingsController.startService);
+router.post('/:id/complete-service', BookingsController.completeService);
+
+// --- Authenticated routes ---
 router.use(authenticateJwt);
 
 router.post('/', requireRole('CUSTOMER'), validate(CreateBookingSchema), BookingsController.create);

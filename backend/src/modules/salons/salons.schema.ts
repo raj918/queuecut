@@ -7,7 +7,7 @@ export const NearbySalonsQuerySchema = z.object({
     radiusMeters: z
       .string()
       .optional()
-      .transform((val) => (val ? parseInt(val, 10) : 500)),
+      .transform((val) => (val ? parseInt(val, 10) : 25000)),
     category: z.string().optional(),
     search: z.string().optional(),
   }),

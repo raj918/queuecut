@@ -62,6 +62,29 @@ app.get('/api/version', (req: Request, res: Response) => {
   });
 });
 
+// Rewards Wallet Endpoint for promotional MVP cashback
+app.get('/api/rewards/wallet', (req: Request, res: Response) => {
+  res.status(200).json({
+    success: true,
+    data: {
+      cashbackBalance: 50.0,
+      currency: 'INR',
+      referralCode: 'QC-KANPUR50',
+      referralBonusAmount: 25.0,
+      transactions: [
+        {
+          id: 'tx_welcome',
+          title: 'Welcome Gift Cashback',
+          amount: 50.0,
+          type: 'CREDIT',
+          timestamp: new Date().toISOString()
+        }
+      ]
+    },
+    message: 'Rewards wallet retrieved successfully'
+  });
+});
+
 // Mount Feature Modules
 app.use('/api/auth', authRoutes);
 app.use('/api/salons', salonsRoutes);
