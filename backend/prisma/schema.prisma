@@ -1,0 +1,460 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  CUSTOMER
+  SALON_OWNER
+  ADMIN
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CHECKED_IN
+  WAITING
+  CALLED
+  IN_SERVICE
+  COMPLETED
+  CANCELLED
+  SKIPPED
+  NO_SHOW
+  EXPIRED
+}
+
+enum BookingSource {
+  ONLINE
+  WALK_IN
+}
+
+enum CommissionStatus {
+  NOT_ELIGIBLE
+  PENDING
+  DUE
+  SETTLED
+  REVERSED
+  DISPUTED
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model User {
+  id                   String                  @id @default(uuid())
+  email                String?                 @unique
+  phone                String                  @unique
+  passwordHash         String
+  name                 String
+  role                 UserRole                @default(CUSTOMER)
+  avatarUrl            String?
+  isActive             Boolean                 @default(true)
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+
+  ownedSalons          Salon[]                 @relation("OwnerSalons")
+  bookings             Booking[]               @relation("CustomerBookings")
+  reviews              Review[]
+  favorites            Favorite[]
+  deviceTokens         DeviceToken[]
+  notificationPref     NotificationPreference?
+  outboxNotifications  NotificationOutbox[]
+  notificationLogs     NotificationLog[]
+  supportRequests      SupportRequest[]
+
+  @@index([phone])
+  @@index([email])
+  @@index([role])
+}
+
+model Salon {
+  id                 String               @id @default(uuid())
+  ownerId            String
+  name               String
+  slug               String               @unique
+  description        String?
+  address            String
+  locality           String
+  city               String               @default("Kanpur")
+  state              String               @default("Uttar Pradesh")
+  postalCode         String
+  latitude           Float
+  longitude          Float
+  phone              String
+  email              String?
+  coverImage         String?
+  logoImage          String?
+  openingTime        String               @default("09:00")
+  closingTime        String               @default("21:00")
+  weeklyClosingDays  String               @default("Tuesday") // comma separated or single day
+  categories         String               @default("Haircut,Beard,Facial,Grooming")
+  isOpen             Boolean              @default(true)
+  isPaused           Boolean              @default(false)
+  pauseReason        String?
+  averageRating      Float                @default(5.0)
+  reviewCount        Int                  @default(0)
+  commissionRate     Float                @default(5.0) // 5% default platform commission
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  owner              User                 @relation("OwnerSalons", fields: [ownerId], references: [id], onDelete: Cascade)
+  businessHours      SalonBusinessHours[]
+  holidays           SalonHoliday[]
+  photos             SalonPhoto[]
+  services           Service[]
+  staff              Staff[]
+  bookings           Booking[]
+  queueCounters      QueueCounter[]
+  queueEvents        QueueEvent[]
+  reviews            Review[]
+  favorites          Favorite[]
+  commissionLedgers  CommissionLedger[]
+
+  @@index([latitude, longitude])
+  @@index([city, locality])
+  @@index([isOpen, isPaused])
+  @@index([ownerId])
+}
+
+model SalonBusinessHours {
+  id        String   @id @default(uuid())
+  salonId   String
+  dayOfWeek Int      // 0 = Sunday, 1 = Monday, ... 6 = Saturday
+  openTime  String   @default("09:00")
+  closeTime String   @default("21:00")
+  isClosed  Boolean  @default(false)
+
+  salon     Salon    @relation(fields: [salonId], references: [id], onDelete: Cascade)
+
+  @@unique([salonId, dayOfWeek])
+}
+
+model SalonHoliday {
+  id        String   @id @default(uuid())
+  salonId   String
+  date      DateTime
+  reason    String?
+
+  salon     Salon    @relation(fields: [salonId], references: [id], onDelete: Cascade)
+
+  @@index([salonId, date])
+}
+
+model SalonPhoto {
+  id        String   @id @default(uuid())
+  salonId   String
+  url       String
+  caption   String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  salon     Salon    @relation(fields: [salonId], references: [id], onDelete: Cascade)
+
+  @@index([salonId, sortOrder])
+}
+
+model Service {
+  id              String           @id @default(uuid())
+  salonId         String
+  name            String
+  description     String?
+  category        String           @default("Haircut")
+  price           Float
+  durationMinutes Int              @default(30)
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  salon           Salon            @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  staffServices   StaffService[]
+  bookingServices BookingService[]
+
+  @@index([salonId, isActive])
+  @@index([category])
+}
+
+model Staff {
+  id               String         @id @default(uuid())
+  salonId          String
+  name             String
+  role             String         @default("Senior Stylist")
+  avatarUrl        String?
+  phone            String?
+  isAvailable      Boolean        @default(true)
+  isActive         Boolean        @default(true)
+  currentBookingId String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  salon            Salon          @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  staffServices    StaffService[]
+  breaks           StaffBreak[]
+  bookings         Booking[]
+
+  @@index([salonId, isAvailable, isActive])
+}
+
+model StaffService {
+  id        String   @id @default(uuid())
+  staffId   String
+  serviceId String
+
+  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, serviceId])
+  @@index([staffId])
+  @@index([serviceId])
+}
+
+model StaffBreak {
+  id        String    @id @default(uuid())
+  staffId   String
+  startTime DateTime
+  endTime   DateTime?
+  reason    String?   @default("Tea / Lunch Break")
+
+  staff     Staff     @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([staffId, startTime])
+}
+
+model Booking {
+  id                   String            @id @default(uuid())
+  salonId              String
+  customerId           String?           // Optional for walk-ins
+  walkInCustomerName   String?           // For walk-in customers
+  walkInCustomerPhone  String?
+  staffId              String?           // Nullable if "Any available barber" initially
+  bookingNumber        String            // e.g. QC-20261122-101
+  tokenNumber          String            // e.g. Q-001
+  bookingSource        BookingSource     @default(ONLINE)
+  status               BookingStatus     @default(CONFIRMED)
+  scheduledDate        String            // YYYY-MM-DD
+  checkInTime          DateTime?
+  calledTime           DateTime?
+  serviceStartTime     DateTime?
+  serviceEndTime       DateTime?
+  totalDurationMinutes Int               @default(30)
+  totalPrice           Float             @default(0.0)
+  commissionRate       Float             @default(5.0)
+  commissionAmount     Float             @default(0.0)
+  customerNotes        String?
+  cancellationReason   String?
+  idempotencyKey       String?           @unique
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  salon                Salon             @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  customer             User?             @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: SetNull)
+  staff                Staff?            @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  bookingServices      BookingService[]
+  queueEvents          QueueEvent[]
+  bookingEvents        BookingEvent[]
+  reviews              Review[]
+  commissionLedgers    CommissionLedger[]
+
+  @@index([salonId, scheduledDate, status])
+  @@index([customerId, status])
+  @@index([staffId, status])
+  @@index([bookingNumber])
+  @@index([tokenNumber])
+  @@index([idempotencyKey])
+}
+
+model BookingService {
+  id                  String   @id @default(uuid())
+  bookingId           String
+  serviceId           String?
+  serviceNameSnapshot String
+  priceSnapshot       Float
+  durationSnapshot    Int
+
+  booking             Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  service             Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@index([bookingId])
+}
+
+model QueueCounter {
+  id              String   @id @default(uuid())
+  salonId         String
+  businessDate    String   // YYYY-MM-DD
+  lastTokenNumber Int      @default(0)
+  updatedAt       DateTime @updatedAt
+
+  salon           Salon    @relation(fields: [salonId], references: [id], onDelete: Cascade)
+
+  @@unique([salonId, businessDate])
+  @@index([salonId, businessDate])
+}
+
+model QueueEvent {
+  id          String         @id @default(uuid())
+  salonId     String
+  bookingId   String
+  eventType   String         // TOKEN_CREATED, CALLED, STARTED, COMPLETED, SKIPPED, NO_SHOW, CANCELLED, REASSIGNED
+  oldStatus   BookingStatus?
+  newStatus   BookingStatus
+  details     String?
+  triggeredBy String         // USER, OWNER, SYSTEM
+  createdAt   DateTime       @default(now())
+
+  salon       Salon          @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  booking     Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([salonId, createdAt])
+  @@index([bookingId])
+}
+
+model BookingEvent {
+  id        String   @id @default(uuid())
+  bookingId String
+  action    String
+  note      String?
+  actorId   String?
+  createdAt DateTime @default(now())
+
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+}
+
+model DeviceToken {
+  id           String   @id @default(uuid())
+  userId       String
+  token        String   @unique
+  platform     String   @default("android") // "android" or "ios"
+  lastActiveAt DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model NotificationPreference {
+  id             String  @id @default(uuid())
+  userId         String  @unique
+  bookingUpdates Boolean @default(true)
+  queueAlerts    Boolean @default(true)
+  soundEnabled   Boolean @default(true)
+
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model NotificationOutbox {
+  id          String             @id @default(uuid())
+  userId      String
+  title       String
+  body        String
+  dataJson    String?
+  status      NotificationStatus @default(PENDING)
+  attempts    Int                @default(0)
+  lastError   String?
+  createdAt   DateTime           @default(now())
+  processedAt DateTime?
+
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+}
+
+model NotificationLog {
+  id           String   @id @default(uuid())
+  userId       String
+  title        String
+  body         String
+  eventType    String
+  status       String   // DELIVERED, FAILED, THROTTLED
+  fcmMessageId String?
+  error        String?
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  salonId    String
+  customerId String
+  bookingId  String?
+  rating     Int      @default(5)
+  comment    String?
+  ownerReply String?
+  createdAt  DateTime @default(now())
+
+  salon      Salon    @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  customer   User     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  booking    Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  @@index([salonId, rating])
+  @@index([customerId])
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String
+  salonId   String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  salon     Salon    @relation(fields: [salonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, salonId])
+  @@index([userId])
+}
+
+model CommissionLedger {
+  id          String                 @id @default(uuid())
+  salonId     String
+  bookingId   String
+  amount      Float                  // Calculated commission (₹)
+  rate        Float                  @default(5.0) // 5%
+  status      CommissionStatus       @default(PENDING)
+  settledAt   DateTime?
+  notes       String?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  salon       Salon                  @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  booking     Booking                @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  adjustments CommissionAdjustment[]
+
+  @@index([salonId, status])
+  @@index([bookingId])
+}
+
+model CommissionAdjustment {
+  id        String           @id @default(uuid())
+  ledgerId  String
+  amount    Float            // Positive or negative adjustment
+  reason    String
+  createdBy String
+  createdAt DateTime         @default(now())
+
+  ledger    CommissionLedger @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+
+  @@index([ledgerId])
+}
+
+model SupportRequest {
+  id        String   @id @default(uuid())
+  userId    String
+  subject   String
+  message   String
+  status    String   @default("OPEN")
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+}

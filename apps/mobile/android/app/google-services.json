@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "100000000001",
+    "project_id": "queuecut-showcase",
+    "storage_bucket": "queuecut-showcase.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:100000000001:android:abcdef0123456789",
+        "android_client_info": {
+          "package_name": "com.queuecut"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDummyKeyReplaceWithYourOwnInProduction"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

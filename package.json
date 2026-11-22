@@ -1,0 +1,31 @@
+{
+  "name": "queuecut-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "QueueCut — Indian salon discovery and digital queue-booking platform",
+  "workspaces": [
+    "backend",
+    "apps/mobile"
+  ],
+  "scripts": {
+    "backend:dev": "npm --prefix backend run dev",
+    "backend:build": "npm --prefix backend run build",
+    "backend:start": "npm --prefix backend run start",
+    "backend:seed": "npm --prefix backend run seed",
+    "backend:test": "npm --prefix backend run test",
+    "mobile:start": "npm --prefix apps/mobile run start",
+    "mobile:android": "npm --prefix apps/mobile run android",
+    "mobile:ios": "npm --prefix apps/mobile run ios"
+  },
+  "keywords": [
+    "queuecut",
+    "salon",
+    "queue-management",
+    "react-native",
+    "express",
+    "prisma",
+    "supabase"
+  ],
+  "author": "QueueCut Team",
+  "license": "UNLICENSED"
+}
