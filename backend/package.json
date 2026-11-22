@@ -4,6 +4,7 @@
   "description": "QueueCut REST API, Queue Engine, and Push Notification Service",
   "main": "dist/server.js",
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "tsx watch src/server.ts",
     "build": "prisma generate && tsc",
     "start": "node dist/server.js",

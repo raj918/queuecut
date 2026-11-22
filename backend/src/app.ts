@@ -34,7 +34,16 @@ if (ENV.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
 
-// System Health Endpoints
+// System Health & Root Endpoints
+app.get('/', (req: Request, res: Response) => {
+  res.status(200).json({
+    status: 'healthy',
+    service: 'QueueCut API',
+    tagline: 'Book your turn. Skip the wait.',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.get('/api/health', (req: Request, res: Response) => {
   res.status(200).json({
     status: 'healthy',

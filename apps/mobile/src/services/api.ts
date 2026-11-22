@@ -2,12 +2,8 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-// Default to Android Emulator IP 10.0.2.2, localhost for iOS, or override via env
-export const API_BASE_URL = Platform.select({
-  android: 'http://10.0.2.2:5000/api',
-  ios: 'http://localhost:5000/api',
-  default: 'http://localhost:5000/api',
-});
+// Live production Vercel cloud backend (accessible globally from any device/network)
+export const API_BASE_URL = 'https://queuecut-eight.vercel.app/api';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
